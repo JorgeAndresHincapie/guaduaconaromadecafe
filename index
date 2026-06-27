@@ -476,9 +476,9 @@ const CORREOS_COLABORADOR = []; // ej: ["colaborador1@correo.com"]
 const CATEGORIAS_PRODUCTO = ["Guadua estructural", "Muebles", "Decoración", "Otros"];
 
 // Métodos de pago manuales: reemplaza con tus datos reales.
-const WHATSAPP_NUMERO = "573000000000"; // formato internacional sin "+" ni espacios
-const NEQUI_NUMERO = "300 000 0000";
-const NEQUI_TITULAR = "Nombre del titular";
+const WHATSAPP_NUMERO = "573207583139"; // formato internacional sin "+" ni espacios
+const NEQUI_NUMERO = "3207583139";
+const NEQUI_TITULAR = "OFIR";
 const BANCO_NOMBRE = "Nombre del banco";
 const BANCO_TIPO_CUENTA = "Ahorros";
 const BANCO_NUMERO = "000-000000-00";
