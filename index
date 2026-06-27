@@ -129,7 +129,8 @@
 
 <div id="aviso-config" class="aviso oculto">
   ⚠️ Falta configurar Firebase. Reemplaza los valores de ejemplo en "firebaseConfig" dentro del código,
-  activa Authentication (correo/contraseña), Firestore y Storage. También reemplaza "TU_PAYPAL_CLIENT_ID" (PayPal, para el pago) en el código.
+  activa Authentication (correo/contraseña), Firestore y Storage. También reemplaza "TU_PAYPAL_CLIENT_ID" (PayPal),
+  y los datos de WHATSAPP_NUMERO, NEQUI_NUMERO/NEQUI_TITULAR y BANCO_* (tus datos reales de cobro) en el código.
 </div>
 
 <!-- ===================== SITIO PÚBLICO ===================== -->
@@ -217,10 +218,31 @@
       <textarea id="chk-notas" rows="2"></textarea>
       <div class="acciones-modal">
         <button type="button" class="btn-secundario" id="btn-cerrar-checkout">Cancelar</button>
-        <button type="submit" class="btn-primario">Continuar al pago</button>
+        <button type="submit" class="btn-primario">Elegir método de pago</button>
       </div>
     </form>
-    <div id="contenedor-paypal" style="margin-top:16px;"></div>
+
+    <div id="paso-metodo-pago" class="oculto">
+      <h3>¿Cómo quieres pagar?</h3>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;">
+        <button class="btn-secundario" id="btn-pago-paypal" style="text-align:left;">💳 Tarjeta (PayPal)</button>
+        <button class="btn-secundario" id="btn-pago-nequi" style="text-align:left;">📱 Nequi</button>
+        <button class="btn-secundario" id="btn-pago-banco" style="text-align:left;">🏦 Transferencia bancaria</button>
+        <button class="btn-secundario" id="btn-pago-whatsapp" style="text-align:left;">💬 Coordinar por WhatsApp</button>
+      </div>
+
+      <div id="contenedor-paypal"></div>
+
+      <div id="bloque-pago-manual" class="oculto">
+        <div id="datos-pago-manual" style="background:var(--beige);padding:14px;border-radius:8px;font-size:0.9em;"></div>
+        <label>Sube el comprobante de pago (captura o foto)</label>
+        <input type="file" id="comprobante-pago" accept="image/*">
+        <button class="btn-primario" id="btn-confirmar-pago-manual" style="margin-top:10px;width:100%;">Ya pagué, enviar pedido</button>
+      </div>
+
+      <button class="btn-link" id="btn-volver-datos-entrega" style="margin-top:10px;">← Volver a datos de entrega</button>
+    </div>
+
     <p id="mensaje-checkout" class="mensaje"></p>
   </div>
 </div>
@@ -308,8 +330,12 @@
         <textarea id="proy-descripcion" rows="3"></textarea>
         <label>Imágenes (puedes seleccionar varias)</label>
         <input type="file" id="proy-imagenes" accept="image/*" multiple>
+        <label>O pega enlaces de imágenes (uno por línea, opcional)</label>
+        <textarea id="proy-imagenes-enlaces" rows="2" placeholder="https://..."></textarea>
         <label>Videos (puedes seleccionar varios, archivos cortos recomendados)</label>
         <input type="file" id="proy-videos" accept="video/*" multiple>
+        <label>O pega enlaces de videos (uno por línea, ej. YouTube, opcional)</label>
+        <textarea id="proy-videos-enlaces" rows="2" placeholder="https://youtube.com/..."></textarea>
         <p class="ayuda" id="ayuda-media-actual"></p>
         <div class="acciones-modal">
           <button type="button" class="btn-secundario oculto" id="btn-cancelar-edicion-proyecto">Cancelar edición</button>
@@ -345,6 +371,8 @@
         <input type="number" id="prod-stock" min="0" value="0" required>
         <label>Imagen del producto</label>
         <input type="file" id="prod-imagen" accept="image/*">
+        <label>O pega el enlace de la imagen (opcional)</label>
+        <input type="text" id="prod-imagen-enlace" placeholder="https://...">
         <p class="ayuda" id="ayuda-imagen-actual"></p>
         <div class="acciones-modal">
           <button type="button" class="btn-secundario oculto" id="btn-cancelar-edicion-producto">Cancelar edición</button>
@@ -382,6 +410,8 @@
         </select>
         <label>Foto del cliente (opcional)</label>
         <input type="file" id="test-foto" accept="image/*">
+        <label>O pega el enlace de la foto (opcional)</label>
+        <input type="text" id="test-foto-enlace" placeholder="https://...">
         <div class="acciones-modal">
           <button type="button" class="btn-secundario oculto" id="btn-cancelar-edicion-testimonio">Cancelar edición</button>
           <button type="submit" class="btn-primario">Guardar testimonio</button>
@@ -402,8 +432,8 @@
   <div id="panel-admin-pedidos" class="oculto">
     <div style="overflow-x:auto;">
       <table>
-        <thead><tr><th>Fecha</th><th>Cliente</th><th>Teléfono</th><th>Total</th><th>Estado</th><th>Detalle</th></tr></thead>
-        <tbody id="tabla-pedidos-admin"><tr><td colspan="6">Cargando...</td></tr></tbody>
+        <thead><tr><th>Fecha</th><th>Cliente</th><th>Teléfono</th><th>Total</th><th>Método de pago</th><th>Estado</th><th>Detalle</th></tr></thead>
+        <tbody id="tabla-pedidos-admin"><tr><td colspan="7">Cargando...</td></tr></tbody>
       </table>
     </div>
   </div>
@@ -445,6 +475,15 @@ const CORREOS_COLABORADOR = []; // ej: ["colaborador1@correo.com"]
 
 const CATEGORIAS_PRODUCTO = ["Guadua estructural", "Muebles", "Decoración", "Otros"];
 
+// Métodos de pago manuales: reemplaza con tus datos reales.
+const WHATSAPP_NUMERO = "573000000000"; // formato internacional sin "+" ni espacios
+const NEQUI_NUMERO = "300 000 0000";
+const NEQUI_TITULAR = "Nombre del titular";
+const BANCO_NOMBRE = "Nombre del banco";
+const BANCO_TIPO_CUENTA = "Ahorros";
+const BANCO_NUMERO = "000-000000-00";
+const BANCO_TITULAR = "Nombre del titular";
+
 const configEstaSinCompletar = firebaseConfig.apiKey === "TU_API_KEY" || !firebaseConfig.apiKey;
 if (configEstaSinCompletar) {
   document.getElementById('aviso-config').classList.remove('oculto');
@@ -472,6 +511,18 @@ function setMensaje(id, texto, tipo) {
 }
 function estrellas(n) {
   return '★'.repeat(n) + '☆'.repeat(5 - n);
+}
+function lineasAUrls(texto) {
+  return texto.split('\n').map(s => s.trim()).filter(Boolean);
+}
+function idYoutube(url) {
+  const m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([\w-]{11})/);
+  return m ? m[1] : null;
+}
+function htmlVideo(url) {
+  const idYt = idYoutube(url);
+  if (idYt) return `<iframe width="100%" height="280" src="https://www.youtube.com/embed/${idYt}" frameborder="0" allowfullscreen></iframe>`;
+  return `<video src="${url}" controls></video>`;
 }
 
 document.querySelectorAll('[data-ir]').forEach(a => {
@@ -638,7 +689,7 @@ function abrirModalProyecto(id) {
   const galeria = document.getElementById('proyecto-galeria');
   let html = '';
   (p.imagenes || []).forEach(url => html += `<img src="${url}">`);
-  (p.videos || []).forEach(url => html += `<video src="${url}" controls></video>`);
+  (p.videos || []).forEach(url => html += htmlVideo(url));
   galeria.innerHTML = html || '<p class="sin-resultados">Sin imágenes ni videos.</p>';
   mostrar('modal-proyecto');
 }
@@ -690,7 +741,68 @@ document.getElementById('form-checkout').addEventListener('submit', async (e) =>
     notas: document.getElementById('chk-notas').value.trim()
   };
   document.getElementById('form-checkout').classList.add('oculto');
+  mostrar('paso-metodo-pago');
+});
+
+document.getElementById('btn-volver-datos-entrega').addEventListener('click', () => {
+  ocultar('paso-metodo-pago');
+  ocultar('bloque-pago-manual');
+  document.getElementById('contenedor-paypal').innerHTML = '';
+  document.getElementById('form-checkout').classList.remove('oculto');
+});
+
+document.getElementById('btn-pago-paypal').addEventListener('click', () => {
+  ocultar('bloque-pago-manual');
   renderizarBotonesPaypal();
+});
+
+document.getElementById('btn-pago-nequi').addEventListener('click', () => {
+  document.getElementById('contenedor-paypal').innerHTML = '';
+  document.getElementById('datos-pago-manual').innerHTML = `
+    <strong>Paga por Nequi a:</strong><br>
+    📱 Número: <strong>${NEQUI_NUMERO}</strong><br>
+    👤 Titular: ${NEQUI_TITULAR}<br>
+    💰 Valor a pagar: ${formatoMoneda(totalCarrito())}`;
+  document.getElementById('bloque-pago-manual').dataset.metodo = 'nequi';
+  mostrar('bloque-pago-manual');
+});
+
+document.getElementById('btn-pago-banco').addEventListener('click', () => {
+  document.getElementById('contenedor-paypal').innerHTML = '';
+  document.getElementById('datos-pago-manual').innerHTML = `
+    <strong>Transfiere a la cuenta:</strong><br>
+    🏦 Banco: <strong>${BANCO_NOMBRE}</strong><br>
+    Tipo de cuenta: ${BANCO_TIPO_CUENTA}<br>
+    Número: <strong>${BANCO_NUMERO}</strong><br>
+    👤 Titular: ${BANCO_TITULAR}<br>
+    💰 Valor a pagar: ${formatoMoneda(totalCarrito())}`;
+  document.getElementById('bloque-pago-manual').dataset.metodo = 'transferencia bancaria';
+  mostrar('bloque-pago-manual');
+});
+
+document.getElementById('btn-confirmar-pago-manual').addEventListener('click', async () => {
+  const metodo = document.getElementById('bloque-pago-manual').dataset.metodo;
+  const archivoComprobante = document.getElementById('comprobante-pago').files[0];
+  setMensaje('mensaje-checkout', 'Enviando pedido...', '');
+  try {
+    let comprobanteURL = null;
+    if (archivoComprobante) {
+      const urls = await subirArchivos([archivoComprobante], 'comprobantes-pago');
+      comprobanteURL = urls[0];
+    }
+    await guardarPedido(null, metodo, 'pendiente_verificacion', comprobanteURL);
+  } catch (error) {
+    setMensaje('mensaje-checkout', 'Error al enviar el pedido: ' + error.message, 'error');
+  }
+});
+
+document.getElementById('btn-pago-whatsapp').addEventListener('click', async () => {
+  setMensaje('mensaje-checkout', 'Enviando pedido...', '');
+  try {
+    await guardarPedido(null, 'whatsapp', 'pendiente_contacto', null, true);
+  } catch (error) {
+    setMensaje('mensaje-checkout', 'Error al enviar el pedido: ' + error.message, 'error');
+  }
 });
 
 function renderizarBotonesPaypal() {
@@ -710,30 +822,42 @@ function renderizarBotonesPaypal() {
     },
     onApprove: async (data, actions) => {
       const detalles = await actions.order.capture();
-      await guardarPedido(detalles.id);
+      await guardarPedido(detalles.id, 'paypal', 'pagado');
     },
     onError: () => setMensaje('mensaje-checkout', 'Ocurrió un error con el pago. Intenta de nuevo.', 'error')
   }).render('#contenedor-paypal');
 }
 
-async function guardarPedido(idPaypal) {
+async function guardarPedido(idPaypal, metodoPago, estado, comprobanteURL, abrirWhatsapp) {
   const carrito = leerCarrito();
   const total = totalCarrito();
   try {
     const refPedido = await addDoc(collection(db, 'pedidos'), {
-      cliente: datosCliente, items: carrito, total, idPaypal, estado: 'pagado', fecha: serverTimestamp()
+      cliente: datosCliente, items: carrito, total, idPaypal: idPaypal || null,
+      metodoPago, estado, comprobanteURL: comprobanteURL || null, fecha: serverTimestamp()
     });
+    const referencia = refPedido.id.slice(0, 8).toUpperCase();
+
+    if (abrirWhatsapp) {
+      const resumen = carrito.map(it => `${it.cantidad}x ${it.nombre}`).join(', ');
+      const mensaje = `Hola, quiero coordinar mi pedido (Ref: ${referencia}):\n${resumen}\nTotal: ${formatoMoneda(total)}\nNombre: ${datosCliente.nombre}\nDirección: ${datosCliente.direccion}, ${datosCliente.ciudad}`;
+      window.open(`https://wa.me/${WHATSAPP_NUMERO}?text=${encodeURIComponent(mensaje)}`, '_blank');
+    }
+
     localStorage.removeItem('carritoGuadua');
-    document.getElementById('ref-pedido').textContent = 'Número de referencia: ' + refPedido.id.slice(0, 8).toUpperCase();
+    document.getElementById('ref-pedido').textContent = 'Número de referencia: ' + referencia;
     ocultar('modal-checkout');
+    ocultar('paso-metodo-pago');
+    ocultar('bloque-pago-manual');
     document.getElementById('form-checkout').classList.remove('oculto');
     document.getElementById('form-checkout').reset();
     document.getElementById('contenedor-paypal').innerHTML = '';
+    document.getElementById('comprobante-pago').value = '';
     actualizarContadorCarrito();
     renderCarrito();
     mostrar('modal-confirmacion');
   } catch (error) {
-    setMensaje('mensaje-checkout', 'El pago se realizó pero hubo un error guardando el pedido. Contáctanos con tu comprobante.', 'error');
+    setMensaje('mensaje-checkout', 'Hubo un error guardando el pedido. Contáctanos directamente.', 'error');
   }
 }
 document.getElementById('btn-cerrar-confirmacion').addEventListener('click', () => ocultar('modal-confirmacion'));
@@ -867,12 +991,18 @@ document.getElementById('form-proyecto').addEventListener('submit', async (e) =>
   const descripcion = document.getElementById('proy-descripcion').value.trim();
   const archivosImagenes = document.getElementById('proy-imagenes').files;
   const archivosVideos = document.getElementById('proy-videos').files;
+  const enlacesImagenes = lineasAUrls(document.getElementById('proy-imagenes-enlaces').value);
+  const enlacesVideos = lineasAUrls(document.getElementById('proy-videos-enlaces').value);
 
   setMensaje('mensaje-proyecto', 'Guardando proyecto (puede tardar si hay videos)...', '');
   try {
     const datosProyecto = { titulo, categoria, descripcion, actualizadoPor: usuarioActual.uid };
-    if (archivosImagenes.length > 0) datosProyecto.imagenes = await subirArchivos(archivosImagenes, 'proyectos/imagenes');
-    if (archivosVideos.length > 0) datosProyecto.videos = await subirArchivos(archivosVideos, 'proyectos/videos');
+    const imagenesSubidas = archivosImagenes.length > 0 ? await subirArchivos(archivosImagenes, 'proyectos/imagenes') : [];
+    const videosSubidos = archivosVideos.length > 0 ? await subirArchivos(archivosVideos, 'proyectos/videos') : [];
+    const todasImagenes = [...imagenesSubidas, ...enlacesImagenes];
+    const todosVideos = [...videosSubidos, ...enlacesVideos];
+    if (todasImagenes.length > 0) datosProyecto.imagenes = todasImagenes;
+    if (todosVideos.length > 0) datosProyecto.videos = todosVideos;
 
     if (id) {
       await updateDoc(doc(db, 'proyectos', id), datosProyecto);
@@ -957,6 +1087,7 @@ document.getElementById('form-producto').addEventListener('submit', async (e) =>
   const precio = Number(document.getElementById('prod-precio').value);
   const stock = Number(document.getElementById('prod-stock').value);
   const archivoImagen = document.getElementById('prod-imagen').files[0];
+  const enlaceImagen = document.getElementById('prod-imagen-enlace').value.trim();
 
   setMensaje('mensaje-producto', 'Guardando producto...', '');
   try {
@@ -964,6 +1095,8 @@ document.getElementById('form-producto').addEventListener('submit', async (e) =>
     if (archivoImagen) {
       const urls = await subirArchivos([archivoImagen], 'productos');
       datosProducto.imagenURL = urls[0];
+    } else if (enlaceImagen) {
+      datosProducto.imagenURL = enlaceImagen;
     }
     if (id) {
       await updateDoc(doc(db, 'productos', id), datosProducto);
@@ -1048,6 +1181,7 @@ document.getElementById('form-testimonio').addEventListener('submit', async (e) 
   const texto = document.getElementById('test-texto').value.trim();
   const calificacion = Number(document.getElementById('test-calificacion').value);
   const archivoFoto = document.getElementById('test-foto').files[0];
+  const enlaceFoto = document.getElementById('test-foto-enlace').value.trim();
 
   setMensaje('mensaje-testimonio', 'Guardando testimonio...', '');
   try {
@@ -1055,6 +1189,8 @@ document.getElementById('form-testimonio').addEventListener('submit', async (e) 
     if (archivoFoto) {
       const urls = await subirArchivos([archivoFoto], 'testimonios');
       datosTestimonio.fotoURL = urls[0];
+    } else if (enlaceFoto) {
+      datosTestimonio.fotoURL = enlaceFoto;
     }
     if (id) {
       await updateDoc(doc(db, 'testimonios', id), datosTestimonio);
@@ -1126,11 +1262,11 @@ async function cargarTestimoniosAdmin() {
 // =====================================================================
 async function cargarPedidosAdmin() {
   const tbody = document.getElementById('tabla-pedidos-admin');
-  tbody.innerHTML = '<tr><td colspan="6">Cargando...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="7">Cargando...</td></tr>';
   const snap = await getDocs(query(collection(db, 'pedidos'), orderBy('fecha', 'desc')));
   const pedidos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
   if (pedidos.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6">Aún no hay pedidos.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7">Aún no hay pedidos.</td></tr>';
     return;
   }
   tbody.innerHTML = pedidos.map(p => {
@@ -1142,9 +1278,10 @@ async function cargarPedidosAdmin() {
         <td>${p.cliente?.nombre || '-'}</td>
         <td>${p.cliente?.telefono || '-'}</td>
         <td>${formatoMoneda(p.total)}</td>
+        <td>${p.metodoPago || '-'} ${p.comprobanteURL ? `<br><a href="${p.comprobanteURL}" target="_blank">ver comprobante</a>` : ''}</td>
         <td>
           <select data-id="${p.id}" class="select-estado-pedido">
-            ${['pagado','enviado','entregado','cancelado'].map(e =>
+            ${['pendiente_verificacion','pendiente_contacto','pagado','enviado','entregado','cancelado'].map(e =>
               `<option value="${e}" ${p.estado === e ? 'selected' : ''}>${e}</option>`).join('')}
           </select>
         </td>
